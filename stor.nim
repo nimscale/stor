@@ -59,12 +59,13 @@ proc encodeBlock*(data: string, len: int, compress = true, encrypt = true): (str
   let encodedBlock = statusByte & crc & toEncode
   return (encodedBlock, hashb, key)
 
-proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt: bool = true, blockSize: int = 1024) =
+proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt: bool = true, blockSize: int = 1): Msg =
   var
     f: File
     bytesRead: int = 0
     blockSizeTmp = 1024 * 1024 * blockSize  # 1 MB default
     buffer = newString(blockSizeTmp)
+    encodingMap: seq[(string, string)] = @[]
 
   try:
     f = open(filename)
@@ -74,9 +75,11 @@ proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt
     while bytesRead > 0:
       var encodedBlock = encodeBlock(buffer, bytesRead, compress, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      echo pudgeDbClient.set(key,encodedBlock[0])
+      discard pudgeDbClient.set(key,encodedBlock[0])
+      encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
       setLen(buffer,blockSizeTmp)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
+    return wrap(encodingMap)
   except IOError:
     echo("File not found.")
   finally:
@@ -85,4 +88,4 @@ proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt
 
 
 var x = getClientId("", 22)
-uploadFile(clientId = x, filename = "/home/khaled/Downloads/test1Mb.db", compress=true, encrypt=true)
+# uploadFile(clientId = x, filename = "/home/khaled/Downloads/ubuntu-16.04.1-server-amd64.iso", compress=true, encrypt=true)
