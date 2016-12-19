@@ -6,8 +6,7 @@ import crc32
 import pudgeclient
 import strutils
 import msgpack
-# TODO: Use pointers to run data
-# TODO: Need to check the return type of uploadFile
+import streams
 
 let pudgeDbClient = newClient("172.17.0.2", 11213)
 let storageSpace = "test"
@@ -27,58 +26,49 @@ proc getClientId*(address: string, port: int, password: string = ""): int =
   counter = counter + 1
   return id
 
-proc calculateStatusByte(compress = true, encrypt = true): string =
-  if compress and encrypt:
-    return "11000000"
-  if compress:
-    return "10000000"
+proc calculateStatusByte(encrypt = true): string =
   if encrypt:
-    return "01000000"
+    return "10000000"
   return "00000000"
 
-proc encodeBlock*(data: string, len: int, compress = true, encrypt = true): (string, string, string) =
+proc encodeBlock*(data: string, len: int, encrypt = true): (string, string, string) =
   var
-    toEncrypt: string
-    toEncode: string
+    data3: string
     hashb: string
 
-  let statusByte = calculateStatusByte(compress, encrypt)
+  let statusByte = calculateStatusByte(encrypt)
   let key: string = computeSHA256(data).hex()
-  if compress:
-    toEncrypt = compress(data)
-  else:
-    toEncrypt = data
 
   if encrypt:
-    toEncode = xxtea.encrypt(toEncrypt, key)
+    data3 = xxtea.encrypt(compress(data), key)
   else:
-    toEncode = toEncrypt
+    data3 = compress(data)
+  hashb = computeSHA256(data3).hex()
+  let crc: string = $crc32(data)
+  let encodedBlock = statusByte & crc & data3
 
-  hashb = computeSHA256(toEncrypt).hex()
-  let crc: string = $crc32(toEncode)
-  let encodedBlock = statusByte & crc & toEncode
   return (encodedBlock, hashb, key)
 
-proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt: bool = true, blockSize: int = 1): Msg =
+proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): Msg =
   var
     f: File
     bytesRead: int = 0
-    blockSizeTmp = 1024 * 1024 * blockSize  # 1 MB default
+    blockSizeTmp = 1024 * 512 * blockSize  # 512 KB default
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
-
   try:
     f = open(filename)
     bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
     setLen(buffer,bytesRead)
 
     while bytesRead > 0:
-      var encodedBlock = encodeBlock(buffer, bytesRead, compress, encrypt)
+      var encodedBlock = encodeBlock(buffer, bytesRead, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      discard pudgeDbClient.set(key,encodedBlock[0])
+      assert pudgeDbClient.set(key,encodedBlock[0]) == true
       encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
-      setLen(buffer,blockSizeTmp)
+      setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
+      setLen(buffer, bytesRead)
     return wrap(encodingMap)
   except IOError:
     echo("File not found.")
@@ -86,6 +76,32 @@ proc uploadFile*(clientId: int, filename: string, compress: bool = true, encrypt
     if f != nil:
       f.close()
 
+proc decodeBlock*(data: string, key: string): string =
+  let
+    statusByte = data[0..7]
+    crc32 = data[8..15]
+    storedData = data[16..^1]
+
+  var finalResult: string
+  if statusByte[0] == '1':
+    let decrypted = xxtea.decrypt(storedData, key)
+    finalResult = uncompress(decrypted)
+  else:
+    finalResult = uncompress(storedData)
+  assert crc32 == $crc32(finalResult)
+  return finalResult
+
+proc downloadFile*(filename: string, msg: Msg) =
+  var
+    key: string
+    value: string
+    file = newFileStream(filename, fmWrite)
+  for e in msg.unwrapMap:
+    key = "$#:$#" % [storageSpace, e.key.unwrapStr]
+    value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
+    file.write(value)
+  file.close()
 
 var x = getClientId("", 22)
-# uploadFile(clientId = x, filename = "/home/khaled/Downloads/ubuntu-16.04.1-server-amd64.iso", compress=true, encrypt=true)
+var xx = uploadFile(clientId = x, filename = "/home/khaled/Downloads/ngrok", encrypt=false)
+downloadFile("ngrok", xx)
