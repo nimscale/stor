@@ -14,19 +14,21 @@ how (gen 1)
 
 ```python
 class storClient():
+    def __init__(self, address, port, passwd=None):
+        pass
 
-    def uploadFiles(self,storagespace,storageServerAddr,filePaths,compress=True,encrypt=True,blocksize=1024):
+    def uploadFiles(self,filePaths,compress=True,encrypt=True,blocksize=1024):
         """
         same as uploadFile but filePaths are msgpack encoded list of file paths
         """
 
-    def downloadFiles(self,storageServerAddr,filePaths,FileMD):
+    def downloadFiles(self,filePaths,FileMD):
         """
         same as uploadFile but filePaths are msgpack encoded list of file paths
         """
 
 
-    def uploadFile(self,storagespace,storageServerAddr,filePath,compress=True,encrypt=True,blocksize=1024):
+    def uploadFile(self,filePath,compress=True,encrypt=True,blocksize=1024):
         """
         load file & cut in blocks & encode & upload to memcache db server (e.g. pudge which will store in sophia db)
 
@@ -37,7 +39,7 @@ class storClient():
         @return msgpack encoded list((hashb,encrkey))
         """
 
-    def downloadFile(self,storageServerAddr,filePath,FileMD):
+    def downloadFile(self,filePath,FileMD):
         """
         load file & cut in blocks & encode & upload to memcache db server (e.g. pudge which will store in sophia db)
 
@@ -49,7 +51,7 @@ class storClient():
         """
         compression done with brotli
         encryption key = blake32 hash of data
-        @return (data3,hashb,encrKey,size)
+        @return (data3,hashb,encrKey)
 
         max size of block = 4 MB
 
@@ -57,10 +59,9 @@ class storClient():
         - hash a (encrKey)
         - compress
         - encrypt with hash a
-           - result is data2 (bin object)
+           - result is encrypted (bin object)
         - hash b of encr/compr file
-        - size (after encr/compr)
-        - data3 = statusByte+crc32+data2
+        - data3 = statusByte+crc32+encrypted
 
         statusByte = ab000000 (byte): a=True if compress, b=True if encrypt
 
@@ -73,7 +74,7 @@ class storClient():
 
         @return (data,size)
 
-        """        
+        """
 
 
 
