@@ -101,7 +101,3 @@ proc downloadFile*(clientId: int, filename: string, msg: Msg) =
     value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
     file.write(value)
   file.close()
-
-var x = getClientId("172.17.0.2", 11213)
-var xx = uploadFile(clientId = x, filename = "/home/khaled/Downloads/ngrok", encrypt=false)
-downloadFile(x, "ngrok", xx)
