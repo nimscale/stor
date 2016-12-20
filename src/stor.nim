@@ -8,7 +8,6 @@ import strutils
 import msgpack
 import streams
 import net
-
 let storageSpace = "test"
 
 
@@ -61,7 +60,7 @@ proc decodeBlock(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): Msg =
+proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): string =
   ## Upload file to pudgedb
   ## Returns msgPk of hashes to restore the uploaded file
   var
@@ -71,6 +70,7 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
     pudgeDbClient = objects[clientId]
+    st: Stream = newStringStream()
 
   try:
     f = open(filename)
@@ -85,36 +85,43 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
       setLen(buffer, bytesRead)
-    return wrap(encodingMap)
+    var wrappedMsg = wrap(encodingMap)
+    st.pack(wrappedMsg.wrap)
+    st.setPosition(0)
+    return st.readAll()
   except IOError:
     echo("File not found.")
   finally:
     if f != nil:
       f.close()
 
-proc downloadFile*(clientId: int, filename: string, msg: Msg) =
+proc downloadFile*(clientId: int, filename: string, msg: string) =
   ## Restore file based on the msgpk passed,Writes the downloaded file to the filename
   var
     key: string
     value: string
     file = newFileStream(filename, fmWrite)
     pudgeDbClient = objects[clientId]
+    st: Stream = newStringStream()
 
-  for e in msg.unwrapMap:
+  st.write(msg)
+  st.setPosition(0)
+  let map = st.unpack()
+  for e in map.unwrapMap:
     key = "$#:$#" % [storageSpace, e.key.unwrapStr]
     value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
     file.write(value)
   file.close()
 
-proc uploadFiles*(clientId: int, filenames: seq[string], encrypt: bool = true, blockSize: int = 1): auto =
+proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1): auto =
   ## Upload files to pudgedb
   ## Returns seq of msgPk object to restore the uploaded files
-  var msgMaps: seq[Msg] = @[]
+  var msgMaps: seq[string] = @[]
   for file in filenames:
-    msgMaps.add(uploadFile(clientId, file, encrypt, blockSize))
+    msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
   return msgMaps
 
-proc downloadFiles*(clientId: int, filenames: seq[string], msgs: seq[Msg]): auto =
+proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: openArray[string]): auto =
   ## Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
   var index = 0
   for msg in msgs:
