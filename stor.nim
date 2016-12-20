@@ -7,22 +7,18 @@ import pudgeclient
 import strutils
 import msgpack
 import streams
+import net
 
-let pudgeDbClient = newClient("172.17.0.2", 11213)
 let storageSpace = "test"
 
-type StorClient = ref object of RootObj
-  address: string
-  port: int
-  password: string
 
 var
-  objects = initTable[int, StorClient]()
+  objects = initTable[int, Socket]()
   counter = 0
 
 proc getClientId*(address: string, port: int, password: string = ""): int =
   var id: int = counter
-  objects[id] = StorClient(address: address, port: port, password: password)
+  objects[id] = newClient(address, port)
   counter = counter + 1
   return id
 
@@ -56,6 +52,8 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     blockSizeTmp = 1024 * 512 * blockSize  # 512 KB default
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
+    pudgeDbClient = objects[clientId]
+
   try:
     f = open(filename)
     bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
@@ -91,17 +89,19 @@ proc decodeBlock*(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc downloadFile*(filename: string, msg: Msg) =
+proc downloadFile*(clientId: int, filename: string, msg: Msg) =
   var
     key: string
     value: string
     file = newFileStream(filename, fmWrite)
+    pudgeDbClient = objects[clientId]
+
   for e in msg.unwrapMap:
     key = "$#:$#" % [storageSpace, e.key.unwrapStr]
     value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
     file.write(value)
   file.close()
 
-var x = getClientId("", 22)
+var x = getClientId("172.17.0.2", 11213)
 var xx = uploadFile(clientId = x, filename = "/home/khaled/Downloads/ngrok", encrypt=false)
-downloadFile("ngrok", xx)
+downloadFile(x, "ngrok", xx)
