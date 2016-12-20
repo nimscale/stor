@@ -17,6 +17,7 @@ var
   counter = 0
 
 proc getClientId*(address: string = "172.17.0.1", port: int = 11213): int =
+  ## Gets client id of the database client
   var id: int = counter
   objects[id] = newClient(address, port)
   counter = counter + 1
@@ -61,6 +62,8 @@ proc decodeBlock(data: string, key: string): string =
   return finalResult
 
 proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): Msg =
+  ## Upload file to pudgedb
+  ## Returns msgPk of hashes to restore the uploaded file
   var
     f: File
     bytesRead: int = 0
@@ -90,6 +93,7 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
       f.close()
 
 proc downloadFile*(clientId: int, filename: string, msg: Msg) =
+  ## Restore file based on the msgpk passed,Writes the downloaded file to the filename
   var
     key: string
     value: string
@@ -101,3 +105,18 @@ proc downloadFile*(clientId: int, filename: string, msg: Msg) =
     value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
     file.write(value)
   file.close()
+
+proc uploadFiles*(clientId: int, filenames: seq[string], encrypt: bool = true, blockSize: int = 1): auto =
+  ## Upload files to pudgedb
+  ## Returns seq of msgPk object to restore the uploaded files
+  var msgMaps: seq[Msg] = @[]
+  for file in filenames:
+    msgMaps.add(uploadFile(clientId, file, encrypt, blockSize))
+  return msgMaps
+
+proc downloadFiles*(clientId: int, filenames: seq[string], msgs: seq[Msg]): auto =
+  ## Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
+  var index = 0
+  for msg in msgs:
+    downloadFile(clientId, filenames[index], msg)
+    index = index + 1
