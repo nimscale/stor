@@ -27,7 +27,7 @@ proc calculateStatusByte(encrypt = true): string =
     return "10000000"
   return "00000000"
 
-proc encodeBlock*(data: string, len: int, encrypt = true): (string, string, string) =
+proc encodeBlock(data: string, len: int, encrypt = true): (string, string, string) =
   var
     data3: string
     hashb: string
@@ -44,6 +44,21 @@ proc encodeBlock*(data: string, len: int, encrypt = true): (string, string, stri
   let encodedBlock = statusByte & crc & data3
 
   return (encodedBlock, hashb, key)
+
+proc decodeBlock(data: string, key: string): string =
+  let
+    statusByte = data[0..7]
+    crc32 = data[8..15]
+    storedData = data[16..^1]
+
+  var finalResult: string
+  if statusByte[0] == '1':
+    let decrypted = xxtea.decrypt(storedData, key)
+    finalResult = uncompress(decrypted)
+  else:
+    finalResult = uncompress(storedData)
+  assert crc32 == $crc32(finalResult)
+  return finalResult
 
 proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): Msg =
   var
@@ -73,21 +88,6 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
   finally:
     if f != nil:
       f.close()
-
-proc decodeBlock*(data: string, key: string): string =
-  let
-    statusByte = data[0..7]
-    crc32 = data[8..15]
-    storedData = data[16..^1]
-
-  var finalResult: string
-  if statusByte[0] == '1':
-    let decrypted = xxtea.decrypt(storedData, key)
-    finalResult = uncompress(decrypted)
-  else:
-    finalResult = uncompress(storedData)
-  assert crc32 == $crc32(finalResult)
-  return finalResult
 
 proc downloadFile*(clientId: int, filename: string, msg: Msg) =
   var
