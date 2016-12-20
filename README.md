@@ -28,7 +28,6 @@ downloadFile(client, path/to/file, msgMap)
 * Upload and download multiple files
 
 ```nim
-Upload and download multiple files
 let client = getClientId(hostname, port)
 var msgs = uploadFiles(clientId = client, filenames = @["file1", "file2"], encrypt=true)
 downloadFiles(client, @["file1", "file2"], msgs)
