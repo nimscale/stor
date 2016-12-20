@@ -1,9 +1,9 @@
 # Super efficient object storage system
 
 
-## Client Intreface:
+## Client Interface:
 * `getClientId(address: string = "172.17.0.1", port: int = 11213)`
-    * Gets client id of the database client
+    * Gets client id
 * `uploadFile(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1)`
     * Returns msgPk object to restore the uploaded file
     * 1 blockSize = 512 KB
@@ -13,11 +13,11 @@
     * Returns seq of msgPk object to restore the uploaded files
     * 1 blockSize = 512 KB
 * `downloadFiles(clientId: int, filenames: seq, msg: Msg)`
-    * Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
+    * Restore files based on the msgpk passed,Writes the downloaded files based on filenames
 
 ## Examples
 
-* Upload and download one file
+* Upload and download single file
 
 ```nim
 let client = getClientId(hostname, port)
