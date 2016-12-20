@@ -16,7 +16,7 @@ var
   objects = initTable[int, Socket]()
   counter = 0
 
-proc getClientId*(address: string, port: int, password: string = ""): int =
+proc getClientId*(address: string = "172.17.0.1", port: int = 11213): int =
   var id: int = counter
   objects[id] = newClient(address, port)
   counter = counter + 1
