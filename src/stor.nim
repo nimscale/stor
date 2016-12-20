@@ -8,6 +8,7 @@ import strutils
 import msgpack
 import streams
 import net
+
 let storageSpace = "test"
 
 
@@ -95,6 +96,17 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     if f != nil:
       f.close()
 
+proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1): string =
+  ## Upload files to pudgedb
+  ## Returns seq of msgPk object to restore the uploaded files
+  var msgMaps: seq[string] = @[]
+  let st: Stream = newStringStream()
+  for file in filenames:
+    msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
+  st.pack(wrap(msgMaps).wrap)
+  st.setPosition(0)
+  return st.readAll()
+
 proc downloadFile*(clientId: int, filename: string, msg: string) =
   ## Restore file based on the msgpk passed,Writes the downloaded file to the filename
   var
@@ -113,17 +125,14 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
     file.write(value)
   file.close()
 
-proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1): auto =
-  ## Upload files to pudgedb
-  ## Returns seq of msgPk object to restore the uploaded files
-  var msgMaps: seq[string] = @[]
-  for file in filenames:
-    msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
-  return msgMaps
 
-proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: openArray[string]): auto =
+proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   ## Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
   var index = 0
-  for msg in msgs:
-    downloadFile(clientId, filenames[index], msg)
+  let st: Stream = newStringStream()
+  st.write(msgs)
+  st.setPosition(0)
+  var map = st.unpack()
+  for msg in map.unwrapArray:
+    downloadFile(clientId, filenames[index], msg.unwrapStr)
     index = index + 1

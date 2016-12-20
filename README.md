@@ -10,7 +10,7 @@
 * `downloadFile(clientId: int, filename: string, msg: string)`
     * Restore file based on the msgpk passed,Writes the downloaded file to the filename
 * `uploadFiles(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1)`
-    * Returns seq of msgPk object to restore the uploaded files
+    * Returns msgPk serialized string to restore the uploaded files
     * 1 blockSize = 512 KB
 * `downloadFiles(clientId: int, filenames: openArray[string], msg: string)`
     * Restore files based on the msgpk passed,Writes the downloaded files based on filenames
