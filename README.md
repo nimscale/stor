@@ -37,4 +37,4 @@ var msgs = uploadFiles(clientId = client, filenames = ["file1", "file2"], encryp
 downloadFiles(client, ["file1", "file2"], msgs)
 ```
 
-## For Python3 interface/porting check [docs](./docs/howtopy.md) and [src](./src/storlib/storlib.nim)
+## For Python3 interface/porting check the [docs](./docs/howtopy.md) and [storlib](./src/storlib/storlib.nim)
