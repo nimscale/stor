@@ -1,8 +1,13 @@
 import "../stor"
-
+import unicode
+import strutils
+import tables
 import pymod
 import pymodpkg/docstrings
 import pymodpkg/pyarrayobject
+
+var
+  objects = initTable[string, string]()
 
 proc getClientIdPy*(address: string = "172.17.0.1", port: int = 11213): int {.exportpy.} =
   return stor.getClientId(address, port)
@@ -11,20 +16,21 @@ proc uploadFilePy*(clientId: int, filename: string, encrypt: int): string {.expo
   var encryptTmp = true
   if encrypt == 0:
     encryptTmp = false
-  return stor.uploadFile(clientId, filename, encryptTmp)
+  var uploaded = stor.uploadFile(clientId, filename, encryptTmp)
+  var uploadedRunes = $toRunes(uploaded)
+  objects[uploadedRunes] = uploaded
+  return uploadedRunes
 
 proc downloadFilePy*(clientId: int, filename: string, msg: string) {.exportpy.} =
-  stor.downloadFile(clientId, filename, msg)
+  stor.downloadFile(clientId, filename, objects[msg])
 
-# TODO: needed
-proc uploadFilesPy*(clientId: int, filenames: openArray[string], encrypt: int): string =
+proc uploadFilesPy*(clientId: int, filenames: string, encrypt: int): string {.exportpy.} =
   var encryptTmp = true
   if encrypt == 0:
     encryptTmp = false
-  return stor.uploadFiles(clientId, filenames, encryptTmp)
+  return stor.uploadFiles(clientId, filenames.split(","), encryptTmp)
 
-# TODO: needed
-proc downloadFilesPy*(clientId: int, filenames: openArray[string], msgs: string) =
-  stor.downloadFiles(clientId, filenames, msgs)
+proc downloadFilesPy*(clientId: int, filenames: string, msgs: string) {.exportpy.} =
+  stor.downloadFiles(clientId, filenames.split(","), msgs)
 
 initPyModule("_storlib", getClientIdPy, downloadFilePy, uploadFilePy, uploadFilesPy)
