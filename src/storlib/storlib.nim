@@ -28,9 +28,13 @@ proc uploadFilesPy*(clientId: int, filenames: string, encrypt: int): string {.ex
   var encryptTmp = true
   if encrypt == 0:
     encryptTmp = false
-  return stor.uploadFiles(clientId, filenames.split(","), encryptTmp)
+  let uploaded = stor.uploadFiles(clientId, filenames.split(","), encryptTmp)
+  let uploadedRunes = $toRunes(uploaded)
+  echo uploadedRunes
+  objects[uploadedRunes] = uploaded
+  return uploadedRunes
 
 proc downloadFilesPy*(clientId: int, filenames: string, msgs: string) {.exportpy.} =
-  stor.downloadFiles(clientId, filenames.split(","), msgs)
+  stor.downloadFiles(clientId, filenames.split(","), objects[msgs])
 
-initPyModule("_storlib", getClientIdPy, downloadFilePy, uploadFilePy, uploadFilesPy)
+initPyModule("_storlib", getClientIdPy, downloadFilePy, downloadFilesPy, uploadFilePy, uploadFilesPy)
