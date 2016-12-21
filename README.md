@@ -36,3 +36,5 @@ let client = getClientId(hostname, port)
 var msgs = uploadFiles(clientId = client, filenames = ["file1", "file2"], encrypt=true)
 downloadFiles(client, ["file1", "file2"], msgs)
 ```
+
+## For Python3 interface/porting check [docs](./docs/howtopy.md) and [src](./src/storlib/storlib.nim)
