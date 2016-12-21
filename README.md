@@ -15,6 +15,10 @@
 * `downloadFiles(clientId: int, filenames: openArray[string], msg: string)`
     * Restore files based on the msgpk passed,Writes the downloaded files based on filenames
 
+
+## Requirements:
+* Pudgedb: To setup pudge please follow [Pudge](https://github.com/recoilme/pudge) docs
+
 ## Examples
 
 * Upload and download single file
