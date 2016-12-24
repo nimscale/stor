@@ -1,7 +1,7 @@
 # Porting to python3 interface
 
 ## Generate .so file guide
-* Install [nim-pymod](https://github.com/jboy/nim-pymod) by running `nimble install nim-pymod`
+* Install [nim-pymod](https://github.com/jboy/nim-pymod) by running `nimble install pymod`
 * Run `python3 path/to/pmgen.py greeting.nim`
 * `.so` file will be generated that can be imported by `python3`
 
