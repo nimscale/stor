@@ -2,7 +2,7 @@
 
 ## Generate .so file guide
 * Install [nim-pymod](https://github.com/jboy/nim-pymod) by running `nimble install pymod`
-* Run `python3 path/to/pmgen.py greeting.nim`
+* Run `python3 ~/.nimble/pkgs/pymod-0.1.0/pmgen.py greeting.nim`
 * `.so` file will be generated that can be imported by `python3`
 
 ## Examples
