@@ -81,7 +81,7 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     while bytesRead > 0:
       var encodedBlock = encodeBlock(buffer, bytesRead, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      assert pudgeDbClient.set(key,encodedBlock[0]) == true
+      discard pudgeDbClient.set(key,encodedBlock[0])
       encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
