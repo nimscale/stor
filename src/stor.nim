@@ -8,6 +8,7 @@ import strutils
 import msgpack
 import streams
 import net
+import base64
 
 let storageSpace = "test"
 
@@ -42,15 +43,15 @@ proc encodeBlock(data: string, len: int, encrypt = true): (string, string, strin
     data3 = compress(data)
   hashb = computeSHA256(data3).hex()
   let crc: string = $crc32(data)
-  let encodedBlock = statusByte & crc & data3
-
+  let encodedBlock = encode(statusByte & crc & data3)
   return (encodedBlock, hashb, key)
 
 proc decodeBlock(data: string, key: string): string =
   let
-    statusByte = data[0..7]
-    crc32 = data[8..15]
-    storedData = data[16..^1]
+    dataTmp = decode(data)
+    statusByte = dataTmp[0..7]
+    crc32 = dataTmp[8..15]
+    storedData = dataTmp[16..^1]
 
   var finalResult: string
   if statusByte[0] == '1':
@@ -61,13 +62,13 @@ proc decodeBlock(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): string =
+proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string =
   ## Upload file to pudgedb
   ## Returns msgPk of hashes to restore the uploaded file
   var
     f: File
     bytesRead: int = 0
-    blockSizeTmp = 1024 * 512 * blockSize  # 512 KB default
+    blockSizeTmp = 1024 * 64  # 64 KB default
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
     pudgeDbClient = objects[clientId]
@@ -81,7 +82,7 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     while bytesRead > 0:
       var encodedBlock = encodeBlock(buffer, bytesRead, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      discard pudgeDbClient.set(key,encodedBlock[0])
+      discard pudgeDbClient.set(key, encodedBlock[0])
       encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
@@ -96,13 +97,13 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     if f != nil:
       f.close()
 
-proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1): string =
+proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true): string =
   ## Upload files to pudgedb
   ## Returns seq of msgPk object to restore the uploaded files
   var msgMaps: seq[string] = @[]
   let st: Stream = newStringStream()
   for file in filenames:
-    msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
+    msgMaps.add($uploadFile(clientId, file, encrypt))
   st.pack(wrap(msgMaps).wrap)
   st.setPosition(0)
   return st.readAll()

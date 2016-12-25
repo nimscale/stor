@@ -4,12 +4,12 @@
 ## Client Interface:
 * `getClientId(address: string = "172.17.0.1", port: int = 11213)`
     * Gets client id
-* `uploadFile(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1)`
+* `uploadFile(clientId: int, filename: string, encrypt: bool = true)`
     * Returns msgPk serialized string that's used to restore the uploaded file
     * 1 blockSize = 512 KB
 * `downloadFile(clientId: int, filename: string, msg: string)`
     * Restore file based on the msgpk passed,Writes the downloaded file to the filename
-* `uploadFiles(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1)`
+* `uploadFiles(clientId: int, filenames: openArray[string], encrypt: bool = true)`
     * Returns msgPk serialized string to restore the uploaded files
     * 1 blockSize = 512 KB
 * `downloadFiles(clientId: int, filenames: openArray[string], msg: string)`
