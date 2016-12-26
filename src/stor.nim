@@ -8,7 +8,7 @@ import strutils
 import msgpack
 import streams
 import net
-import base64
+
 
 let storageSpace = "test"
 
@@ -43,12 +43,12 @@ proc encodeBlock(data: string, len: int, encrypt = true): (string, string, strin
     data3 = compress(data)
   hashb = computeSHA256(data3).hex()
   let crc: string = $crc32(data)
-  let encodedBlock = encode(statusByte & crc & data3)
+  let encodedBlock = statusByte & crc & data3
   return (encodedBlock, hashb, key)
 
 proc decodeBlock(data: string, key: string): string =
   let
-    dataTmp = decode(data)
+    dataTmp = data
     statusByte = dataTmp[0..7]
     crc32 = dataTmp[8..15]
     storedData = dataTmp[16..^1]
