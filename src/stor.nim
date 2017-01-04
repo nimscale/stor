@@ -21,7 +21,6 @@ proc getClientId*(address: string = "172.17.0.1", port: int = 16379): int =
   ## Gets client id of the database client
   var id: int = counter
   objects[id] = redis.open(address, port.Port)
-  echo objects[id].flushall()
   counter = counter + 1
   return id
 
