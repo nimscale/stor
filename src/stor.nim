@@ -11,12 +11,11 @@ import net
 
 let storageSpace = "test"
 
-
 var
   objects = initTable[int, Socket]()
   counter = 0
 
-proc getClientId*(address: string = "172.17.0.1", port: int = 11213): int =
+proc getClientId*(address: string = "127.0.0.1", port: int = 11213): int =
   ## Gets client id of the database client
   var id: int = counter
   objects[id] = newClient(address, port)
@@ -86,10 +85,11 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
       setLen(buffer, bytesRead)
-    var wrappedMsg = wrap(encodingMap)
-    st.pack(wrappedMsg.wrap)
+
+    st.pack(encodingMap)
     st.setPosition(0)
     return st.readAll()
+
   except IOError:
     echo("File not found.")
   finally:
@@ -103,7 +103,8 @@ proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = t
   let st: Stream = newStringStream()
   for file in filenames:
     msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
-  st.pack(wrap(msgMaps).wrap)
+
+  st.pack(msgMaps)
   st.setPosition(0)
   return st.readAll()
 
@@ -114,14 +115,15 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
     value: string
     file = newFileStream(filename, fmWrite)
     pudgeDbClient = objects[clientId]
-    st: Stream = newStringStream()
+    st: Stream = newStringStream(msg)
+    encodingMap: seq[(string, string)] = @[]
 
-  st.write(msg)
+  # st.write(msg)
   st.setPosition(0)
-  let map = st.unpack()
-  for e in map.unwrapMap:
-    key = "$#:$#" % [storageSpace, e.key.unwrapStr]
-    value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
+  st.unpack(encodingMap)
+  for e in encodingMap:
+    key = "$#:$#" % [storageSpace, e[0]]
+    value = decodeBlock(pudgeDbClient.get(key), e[1])
     file.write(value)
   file.close()
 
@@ -129,10 +131,11 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
 proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   ## Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
   var index = 0
+  var msgMaps: seq[string] = @[]
   let st: Stream = newStringStream()
   st.write(msgs)
   st.setPosition(0)
-  var map = st.unpack()
-  for msg in map.unwrapArray:
-    downloadFile(clientId, filenames[index], msg.unwrapStr)
+  st.unpack(msgMaps)
+  for msg in msgMaps:
+    downloadFile(clientId, filenames[index], msg)
     index = index + 1

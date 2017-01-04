@@ -1,4 +1,4 @@
-import "../stor"
+import "stor"
 import unicode
 import strutils
 import tables
@@ -9,11 +9,11 @@ import pymodpkg/pyarrayobject
 var
   objects = initTable[string, string]()
 
-proc getClientIdPy*(address: string = "172.17.0.1", port: int = 11213): int {.exportpy.} =
+proc getClientId0*(address: string = "127.0.0.1", port: int = 11213): int {.exportpy.} =
   docstring"""Get stor clientId"""
   return stor.getClientId(address, port)
 
-proc uploadFilePy*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
+proc uploadFile0*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
   docstring"""
     Upload file to pudgedb
     @param clientId
@@ -29,7 +29,7 @@ proc uploadFilePy*(clientId: int, filename: string, encrypt: int): string {.expo
   objects[uploadedRunes] = uploaded
   return uploadedRunes
 
-proc downloadFilePy*(clientId: int, filename: string, msg: string) {.exportpy.} =
+proc downloadFile0*(clientId: int, filename: string, msg: string) {.exportpy.} =
   docstring"""
     Download file to file system
     @param clientId
@@ -38,7 +38,7 @@ proc downloadFilePy*(clientId: int, filename: string, msg: string) {.exportpy.} 
   """
   stor.downloadFile(clientId, filename, objects[msg])
 
-proc uploadFilesPy*(clientId: int, filenames: string, encrypt: int): string {.exportpy.} =
+proc uploadFiles0*(clientId: int, filenames: string, encrypt: int): string {.exportpy.} =
   docstring"""
     Upload files to pudgedb
     @param clientId
@@ -55,7 +55,7 @@ proc uploadFilesPy*(clientId: int, filenames: string, encrypt: int): string {.ex
   objects[uploadedRunes] = uploaded
   return uploadedRunes
 
-proc downloadFilesPy*(clientId: int, filenames: string, msgs: string) {.exportpy.} =
+proc downloadFiles0*(clientId: int, filenames: string, msgs: string) {.exportpy.} =
   docstring"""
     Download files to file system
     @param clientId
@@ -64,4 +64,4 @@ proc downloadFilesPy*(clientId: int, filenames: string, msgs: string) {.exportpy
   """
   stor.downloadFiles(clientId, filenames.split(","), objects[msgs])
 
-initPyModule("_storlib", getClientIdPy, downloadFilePy, downloadFilesPy, uploadFilePy, uploadFilesPy)
+initPyModule("g8os_stor", getClientId0, downloadFile0, downloadFiles0, uploadFile0, uploadFiles0)
