@@ -9,13 +9,15 @@ import msgpack
 import streams
 import net
 
+
 let storageSpace = "test"
+
 
 var
   objects = initTable[int, Socket]()
   counter = 0
 
-proc getClientId*(address: string = "127.0.0.1", port: int = 11213): int =
+proc getClientId*(address: string = "172.17.0.1", port: int = 11213): int =
   ## Gets client id of the database client
   var id: int = counter
   objects[id] = newClient(address, port)
@@ -42,14 +44,14 @@ proc encodeBlock(data: string, len: int, encrypt = true): (string, string, strin
   hashb = computeSHA256(data3).hex()
   let crc: string = $crc32(data)
   let encodedBlock = statusByte & crc & data3
-
   return (encodedBlock, hashb, key)
 
 proc decodeBlock(data: string, key: string): string =
   let
-    statusByte = data[0..7]
-    crc32 = data[8..15]
-    storedData = data[16..^1]
+    dataTmp = data
+    statusByte = dataTmp[0..7]
+    crc32 = dataTmp[8..15]
+    storedData = dataTmp[16..^1]
 
   var finalResult: string
   if statusByte[0] == '1':
@@ -60,13 +62,13 @@ proc decodeBlock(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSize: int = 1): string =
+proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string =
   ## Upload file to pudgedb
   ## Returns msgPk of hashes to restore the uploaded file
   var
     f: File
     bytesRead: int = 0
-    blockSizeTmp = 1024 * 512 * blockSize  # 512 KB default
+    blockSizeTmp = 1024 * 64  # 64 KB default
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
     pudgeDbClient = objects[clientId]
@@ -80,31 +82,29 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true, blockSiz
     while bytesRead > 0:
       var encodedBlock = encodeBlock(buffer, bytesRead, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      assert pudgeDbClient.set(key,encodedBlock[0]) == true
+      discard pudgeDbClient.set(key, encodedBlock[0])
       encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
       setLen(buffer, bytesRead)
-
-    st.pack(encodingMap)
+    var wrappedMsg = wrap(encodingMap)
+    st.pack(wrappedMsg.wrap)
     st.setPosition(0)
     return st.readAll()
-
   except IOError:
     echo("File not found.")
   finally:
     if f != nil:
       f.close()
 
-proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true, blockSize: int = 1): string =
+proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = true): string =
   ## Upload files to pudgedb
   ## Returns seq of msgPk object to restore the uploaded files
   var msgMaps: seq[string] = @[]
   let st: Stream = newStringStream()
   for file in filenames:
-    msgMaps.add($uploadFile(clientId, file, encrypt, blockSize))
-
-  st.pack(msgMaps)
+    msgMaps.add($uploadFile(clientId, file, encrypt))
+  st.pack(wrap(msgMaps).wrap)
   st.setPosition(0)
   return st.readAll()
 
@@ -115,15 +115,14 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
     value: string
     file = newFileStream(filename, fmWrite)
     pudgeDbClient = objects[clientId]
-    st: Stream = newStringStream(msg)
-    encodingMap: seq[(string, string)] = @[]
+    st: Stream = newStringStream()
 
-  # st.write(msg)
+  st.write(msg)
   st.setPosition(0)
-  st.unpack(encodingMap)
-  for e in encodingMap:
-    key = "$#:$#" % [storageSpace, e[0]]
-    value = decodeBlock(pudgeDbClient.get(key), e[1])
+  let map = st.unpack()
+  for e in map.unwrapMap:
+    key = "$#:$#" % [storageSpace, e.key.unwrapStr]
+    value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
     file.write(value)
   file.close()
 
@@ -131,11 +130,10 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
 proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   ## Restore files based on the msgpk passed,Writes the downloaded files to based on filenames
   var index = 0
-  var msgMaps: seq[string] = @[]
   let st: Stream = newStringStream()
   st.write(msgs)
   st.setPosition(0)
-  st.unpack(msgMaps)
-  for msg in msgMaps:
-    downloadFile(clientId, filenames[index], msg)
+  var map = st.unpack()
+  for msg in map.unwrapArray:
+    downloadFile(clientId, filenames[index], msg.unwrapStr)
     index = index + 1
