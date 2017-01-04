@@ -139,8 +139,3 @@ proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   for msg in map.unwrapArray:
     downloadFile(clientId, filenames[index], msg.unwrapStr)
     index = index + 1
-
-let client = getClientId("172.17.0.2")
-let msgMap = uploadFile(clientId = client, filename = "/home/khaled/Downloads/ngrok", encrypt=false)
-echo "-------------------"
-downloadFile(client, "/home/khaled/Desktop/ngrok", msgMap)
