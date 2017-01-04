@@ -3,24 +3,25 @@ import nimSHA2
 import snappy
 import xxtea
 import crc32
-import pudgeclient
+import base64
 import strutils
 import msgpack
 import streams
 import net
-
+import redis
 
 let storageSpace = "test"
 
 
 var
-  objects = initTable[int, Socket]()
+  objects = initTable[int, Redis]()
   counter = 0
 
-proc getClientId*(address: string = "172.17.0.1", port: int = 11213): int =
+proc getClientId*(address: string = "172.17.0.1", port: int = 16379): int =
   ## Gets client id of the database client
   var id: int = counter
-  objects[id] = newClient(address, port)
+  objects[id] = redis.open(address, port.Port)
+  echo objects[id].flushall()
   counter = counter + 1
   return id
 
@@ -71,18 +72,19 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string 
     blockSizeTmp = 1024 * 64  # 64 KB default
     buffer = newString(blockSizeTmp)
     encodingMap: seq[(string, string)] = @[]
-    pudgeDbClient = objects[clientId]
+    ardbClient = objects[clientId]
     st: Stream = newStringStream()
 
   try:
-    f = open(filename)
+    f = system.open(filename)
     bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
     setLen(buffer,bytesRead)
 
     while bytesRead > 0:
       var encodedBlock = encodeBlock(buffer, bytesRead, encrypt)
       let key = "$#:$#" % [storageSpace, encodedBlock[1]]
-      discard pudgeDbClient.set(key, encodedBlock[0])
+      ardbClient.setk(key, encode(encodedBlock[0]))
+      # assert ardbClient.get(key) == encode(encodedBlock[0])
       encodingMap.add((hashb: encodedBlock[1], key: encodedBlock[2]))
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
@@ -114,7 +116,7 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
     key: string
     value: string
     file = newFileStream(filename, fmWrite)
-    pudgeDbClient = objects[clientId]
+    ardbClient = objects[clientId]
     st: Stream = newStringStream()
 
   st.write(msg)
@@ -122,7 +124,7 @@ proc downloadFile*(clientId: int, filename: string, msg: string) =
   let map = st.unpack()
   for e in map.unwrapMap:
     key = "$#:$#" % [storageSpace, e.key.unwrapStr]
-    value = decodeBlock(pudgeDbClient.get(key), e.val.unwrapStr)
+    value = decodeBlock(decode(ardbClient.get(key)), e.val.unwrapStr)
     file.write(value)
   file.close()
 
@@ -137,3 +139,8 @@ proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   for msg in map.unwrapArray:
     downloadFile(clientId, filenames[index], msg.unwrapStr)
     index = index + 1
+
+let client = getClientId("172.17.0.2")
+let msgMap = uploadFile(clientId = client, filename = "/home/khaled/Downloads/ngrok", encrypt=false)
+echo "-------------------"
+downloadFile(client, "/home/khaled/Desktop/ngrok", msgMap)
