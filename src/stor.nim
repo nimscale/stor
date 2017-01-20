@@ -12,15 +12,14 @@ import redis
 
 let storageSpace = "test"
 
-
 var
   objects = initTable[int, Redis]()
   counter = 0
 
-proc getClientId*(address: string = "172.17.0.1", port: int = 16379): int =
+proc getClientId*(address: cstring = "172.17.0.1", port: int = 16379): int {.exportc: "getClientId"} =
   ## Gets client id of the database client
   var id: int = counter
-  objects[id] = redis.open(address, port.Port)
+  objects[id] = redis.open($address, port.Port)
   counter = counter + 1
   return id
 
@@ -62,7 +61,7 @@ proc decodeBlock(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string =
+proc uploadFile*(clientId: int, filename: cstring, encrypt: bool = true): cstring {.exportc: "uploadFile"} =
   ## Upload file to pudgedb
   ## Returns msgPk of hashes to restore the uploaded file
   var
@@ -75,7 +74,7 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string 
     st: Stream = newStringStream()
 
   try:
-    f = system.open(filename)
+    f = system.open($filename)
     bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
     setLen(buffer,bytesRead)
 
@@ -109,16 +108,16 @@ proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = t
   st.setPosition(0)
   return st.readAll()
 
-proc downloadFile*(clientId: int, filename: string, msg: string) =
+proc downloadFile*(clientId: int, filename: cstring, msg: cstring) {.exportc: "downloadFile"} =
   ## Restore file based on the msgpk passed,Writes the downloaded file to the filename
   var
     key: string
     value: string
-    file = newFileStream(filename, fmWrite)
+    file = newFileStream($filename, fmWrite)
     ardbClient = objects[clientId]
     st: Stream = newStringStream()
 
-  st.write(msg)
+  st.write($msg)
   st.setPosition(0)
   let map = st.unpack()
   for e in map.unwrapMap:
@@ -136,5 +135,10 @@ proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
   st.setPosition(0)
   var map = st.unpack()
   for msg in map.unwrapArray:
-    downloadFile(clientId, filenames[index], msg.unwrapStr)
+    downloadFile(clientId, $filenames[index], msg.unwrapStr)
     index = index + 1
+
+# var c = getclientId("127.0.0.1", 6379)
+# var x = uploadFile(c, "/tmp/install.sh", true)
+# echo x
+# downloadFile(c, "/tmp/restore", x)

@@ -13,7 +13,7 @@ proc getClientId0*(address: string = "127.0.0.1", port: int = 11213): int {.expo
   docstring"""Get stor clientId"""
   return stor.getClientId(address, port)
 
-proc uploadFile0*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
+proc uploadFile*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
   docstring"""
     Upload file to pudgedb
     @param clientId
