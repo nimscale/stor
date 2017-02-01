@@ -9,11 +9,11 @@ import pymodpkg/pyarrayobject
 var
   objects = initTable[string, string]()
 
-proc getClientId0*(address: string = "127.0.0.1", port: int = 11213): int {.exportpy.} =
+proc getClientId0*(address: string = "127.0.0.1", port: int = 16379): int {.exportpy.} =
   docstring"""Get stor clientId"""
   return stor.getClientId(address, port)
 
-proc uploadFile*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
+proc uploadFile0*(clientId: int, filename: string, encrypt: int): string {.exportpy.} =
   docstring"""
     Upload file to pudgedb
     @param clientId
@@ -25,8 +25,8 @@ proc uploadFile*(clientId: int, filename: string, encrypt: int): string {.export
   if encrypt == 0:
     encryptTmp = false
   var uploaded = stor.uploadFile(clientId, filename, encryptTmp)
-  var uploadedRunes = $toRunes(uploaded)
-  objects[uploadedRunes] = uploaded
+  var uploadedRunes = $toRunes($uploaded)
+  # objects[uploadedRunes] = uploaded
   return uploadedRunes
 
 proc downloadFile0*(clientId: int, filename: string, msg: string) {.exportpy.} =
@@ -64,4 +64,4 @@ proc downloadFiles0*(clientId: int, filenames: string, msgs: string) {.exportpy.
   """
   stor.downloadFiles(clientId, filenames.split(","), objects[msgs])
 
-initPyModule("g8os_stor", getClientId0, downloadFile0, downloadFiles0, uploadFile0, uploadFiles0)
+initPyModule("g8storclient", getClientId0, downloadFile0, downloadFiles0, uploadFile0, uploadFiles0)
