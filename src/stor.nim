@@ -16,7 +16,7 @@ var
   objects = initTable[int, Redis]()
   counter = 0
 
-proc getClientId*(address: cstring = "172.17.0.1", port: int = 16379): int {.exportc: "getClientId"} =
+proc getClientId*(address: string = "172.17.0.1", port: int = 16379): int = # {.exportc: "getClientId"} =
   ## Gets client id of the database client
   var id: int = counter
   objects[id] = redis.open($address, port.Port)
@@ -61,7 +61,7 @@ proc decodeBlock(data: string, key: string): string =
   assert crc32 == $crc32(finalResult)
   return finalResult
 
-proc uploadFile*(clientId: int, filename: cstring, encrypt: bool = true): cstring {.exportc: "uploadFile"} =
+proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string = # {.exportc: "uploadFile"} =
   ## Upload file to pudgedb
   ## Returns msgPk of hashes to restore the uploaded file
   var
@@ -108,7 +108,7 @@ proc uploadFiles*(clientId: int, filenames: openArray[string], encrypt: bool = t
   st.setPosition(0)
   return st.readAll()
 
-proc downloadFile*(clientId: int, filename: cstring, msg: cstring) {.exportc: "downloadFile"} =
+proc downloadFile*(clientId: int, filename: string, msg: cstring) = # {.exportc: "downloadFile"} =
   ## Restore file based on the msgpk passed,Writes the downloaded file to the filename
   var
     key: string
@@ -138,7 +138,14 @@ proc downloadFiles*(clientId: int, filenames: openArray[string], msgs: string) =
     downloadFile(clientId, $filenames[index], msg.unwrapStr)
     index = index + 1
 
-# var c = getclientId("127.0.0.1", 6379)
-# var x = uploadFile(c, "/tmp/install.sh", true)
+# var c = getclientId("172.17.0.2", 16379)
+
+# echo "----- SMALL ------"
+# var x = uploadFile(c, "/tmp/hello", true)
 # echo x
+
+# echo "----- LARGE ------"
+# var y = uploadFile(c, "/tmp/big-hello", true)
+# echo len(y)
+
 # downloadFile(c, "/tmp/restore", x)
