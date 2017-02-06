@@ -51,7 +51,6 @@ proc uploadFiles0*(clientId: int, filenames: string, encrypt: int): string {.exp
     encryptTmp = false
   let uploaded = stor.uploadFiles(clientId, filenames.split(","), encryptTmp)
   let uploadedRunes = $toRunes(uploaded)
-  echo uploadedRunes
   objects[uploadedRunes] = uploaded
   return uploadedRunes
 

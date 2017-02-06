@@ -87,9 +87,11 @@ proc uploadFile*(clientId: int, filename: string, encrypt: bool = true): string 
       setLen(buffer, bytesRead)
       bytesRead = f.readBuffer(buffer[0].addr, blockSizeTmp)
       setLen(buffer, bytesRead)
+
     var wrappedMsg = wrap(encodingMap)
     st.pack(wrappedMsg.wrap)
-    st.setPosition(0)
+
+    st.setposition(0)
     return st.readAll()
   except IOError:
     echo("File not found.")
