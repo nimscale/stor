@@ -43,6 +43,8 @@ cd /opt
 git clone https://github.com/nimscale/stor
 cd stor/src
 
+pmgen g8os_stor_py.nim
+
 # g8storclient.so is ready
 ```
 
